@@ -1,90 +1,114 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { loginUser, registerUser, fetchCurrentUser } from '../services/auth'
 import api from '../services/api'
 
 const AuthContext = createContext(null)
+const STORAGE_KEY = 'xcombinator_token'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const setToken = token => {
     if (token) {
-      localStorage.setItem('xcombinator_token', token)
+      localStorage.setItem(STORAGE_KEY, token)
       api.defaults.headers.common.Authorization = `Bearer ${token}`
-    } else {
-      localStorage.removeItem('xcombinator_token')
-      delete api.defaults.headers.common.Authorization
+      setIsAuthenticated(true)
+      return
     }
+
+    localStorage.removeItem(STORAGE_KEY)
+    delete api.defaults.headers.common.Authorization
+    setIsAuthenticated(false)
   }
 
-  const syncToken = () => {
-    const token = localStorage.getItem('xcombinator_token')
-    if (token) {
-      api.defaults.headers.common.Authorization = `Bearer ${token}`
+  const clearSession = () => {
+    setToken(null)
+    setUser(null)
+    setError(null)
+  }
+
+  const initializeSession = async () => {
+    const token = localStorage.getItem(STORAGE_KEY)
+    if (!token) {
+      clearSession()
+      setLoading(false)
+      return
+    }
+
+    api.defaults.headers.common.Authorization = `Bearer ${token}`
+
+    try {
+      const { user: currentUser } = await fetchCurrentUser()
+      setUser(currentUser)
+      setIsAuthenticated(true)
+    } catch (err) {
+      clearSession()
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    const initialize = async () => {
-      syncToken()
-      const token = localStorage.getItem('xcombinator_token')
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        const data = await fetchCurrentUser()
-        setUser(data.user)
-      } catch (err) {
-        setToken(null)
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    initialize()
+    initializeSession()
   }, [])
 
   const login = async (email, password) => {
     setError(null)
+
     try {
-      const data = await loginUser(email, password)
-      setToken(data.token)
-      setUser(data.user)
-      return data.user
+      const { token, user: authenticatedUser } = await loginUser(email, password)
+      setToken(token)
+      setUser(authenticatedUser)
+      return authenticatedUser
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed')
+      clearSession()
       throw err
     }
   }
 
   const register = async (email, password) => {
     setError(null)
+
     try {
-      const data = await registerUser(email, password)
-      setToken(data.token)
-      setUser(data.user)
-      return data.user
+      const { token, user: newUser } = await registerUser(email, password)
+      setToken(token)
+      setUser(newUser)
+      return newUser
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed')
+      clearSession()
       throw err
     }
   }
 
   const logout = () => {
-    setToken(null)
-    setUser(null)
+    clearSession()
+    window.location.href = '/login'
   }
 
-  return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const hasRole = allowedRoles => {
+    return Boolean(user && allowedRoles.includes(user.role))
+  }
+
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated,
+      loading,
+      error,
+      login,
+      register,
+      logout,
+      hasRole,
+    }),
+    [user, isAuthenticated, loading, error]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
