@@ -1,12 +1,13 @@
 import React from 'react'
 import { useAuth } from '../context/AuthContext'
+import DashboardLayout from '../layouts/DashboardLayout'
 
 export default function Dashboard() {
   const { user, logout } = useAuth()
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-4xl rounded-3xl bg-white p-8 shadow-xl">
+    <DashboardLayout>
+      <div className="rounded-3xl bg-white p-8 shadow-xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-semibold">Welcome back, {user?.email}</h1>
@@ -30,6 +31,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
