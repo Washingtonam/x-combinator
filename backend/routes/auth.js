@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { authCheck } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -25,6 +26,11 @@ router.post('/login', async (req, res) => {
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
   res.json({ token, user: { id: user._id, email: user.email, role: user.role } });
+});
+
+router.get('/me', authCheck, async (req, res) => {
+  const user = req.user;
+  res.json({ user: { id: user._id, email: user.email, role: user.role } });
 });
 
 module.exports = router;
