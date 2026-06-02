@@ -3,5 +3,13 @@
     "buildCommand": "cd backend && npm install",
     "startCommand": "cd backend && npm run start"
   },
-  "services": []
+  "services": [
+    {
+      "name": "frontend",
+      "type": "static",
+      "path": "frontend",
+      "buildCommand": "npm install && npm run build",
+      "staticDir": "dist"
+    }
+  ]
 }
