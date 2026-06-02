@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "server.js",
   "scripts": {
+    "build": "echo 'skip backend build'",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
