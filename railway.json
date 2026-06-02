@@ -1,0 +1,7 @@
+{
+  "deploy": {
+    "buildCommand": "cd backend && npm install",
+    "startCommand": "cd backend && npm run start"
+  },
+  "services": []
+}
